@@ -55,6 +55,9 @@ dependencies {
     implementation(libs.androidxmaterialiconsextended)
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.preference.ktx)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.logging)
 
 
     testImplementation(libs.junit)

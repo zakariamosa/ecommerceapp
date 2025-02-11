@@ -1,10 +1,14 @@
 package com.example.ecommerceapp.viewmodel
 
 // ProductViewModel.kt
+import android.app.Application
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.preference.PreferenceManager
 import com.example.ecommerceapp.model.CartItem
 import com.example.ecommerceapp.model.Product
 import com.example.ecommerceapp.repository.ProductRepository

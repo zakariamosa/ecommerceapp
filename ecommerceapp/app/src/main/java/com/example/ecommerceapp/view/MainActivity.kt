@@ -1,10 +1,12 @@
 package com.example.ecommerceapp.view
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -15,13 +17,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ecommerceapp.model.Product
 import com.example.ecommerceapp.viewmodel.ProductViewModel
 import com.example.ecommerceapp.ui.theme.EcommerceappTheme
 import com.example.ecommerceapp.viewmodel.ConfigViewModel
+import com.example.ecommerceapp.viewmodel.ConfigViewModelFactory
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -167,70 +173,81 @@ fun ProductItem(product: Product, onAddToCart: () -> Unit) {
 
 @Composable
 fun SettingsScreen(
-    configViewModel: ConfigViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    var showSuccess by remember { mutableStateOf(false) }
+    val context = LocalContext.current.applicationContext as Application // Get application context
+
+    val viewModel: ConfigViewModel = viewModel(
+        factory = ConfigViewModelFactory(context) // Pass application instance
+    )
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Base URL Configuration", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(24.dp))
-
-        val currentValue = configViewModel.editableBaseUrl
-        var localValue by remember { mutableStateOf(currentValue) }
-
-        LaunchedEffect(currentValue) {
-            localValue = currentValue
-        }
-
+        // Phone Number Input
         OutlinedTextField(
-            value = localValue,
-            onValueChange = { localValue = it },
+            value = viewModel.phoneNumber,
+            onValueChange = { viewModel.updatePhoneNumber(it) },
+            label = { Text("Phone Number") },
+            placeholder = { Text("01xxxxxxxxx") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Phone,
+                imeAction = ImeAction.Done
+            ),
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("API Endpoint") },
-            isError = !configViewModel.isValidUrl(localValue),
+            isError = viewModel.phoneNumber.isNotBlank() && !viewModel.validatePhoneNumber(),
             supportingText = {
-                if (!configViewModel.isValidUrl(localValue)) {
-                    Text("Invalid URL format")
+                if (viewModel.phoneNumber.isNotBlank() && !viewModel.validatePhoneNumber()) {
+                    Text("Invalid Egyptian phone number format")
                 }
             }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Connect Button
         Button(
-            onClick = {
-                if (configViewModel.isValidUrl(localValue)) {
-                    configViewModel.updateEditableUrl(localValue)
-                    configViewModel.saveBaseUrl()
-                    showSuccess = true
-                }
-            },
+            onClick = { viewModel.fetchBaseUrl() },
             modifier = Modifier.align(Alignment.End),
-            enabled = localValue.isNotBlank() &&
-                    localValue != currentValue &&
-                    configViewModel.isValidUrl(localValue)
+            enabled = viewModel.validatePhoneNumber() && !viewModel.isLoading
         ) {
-            Text("Save Changes")
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text("Connect")
+            }
         }
 
-        if (showSuccess) {
-            LaunchedEffect(Unit) {
-                delay(2000)
-                showSuccess = false
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Base URL Display
+        if (viewModel.baseUrl.isNotEmpty()) {
+            Column {
+                Text("Configured Base URL:", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = viewModel.baseUrl,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary)
+                )
             }
+        }
+
+        // Error Message
+        viewModel.errorMessage?.let { error ->
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Settings saved successfully!",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp)
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
 }
-
 
